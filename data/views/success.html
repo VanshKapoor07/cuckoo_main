@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Motor Status</title>
+</head>
+<body>
+    <h1 id="statusMessage"></h1>
+
+    <script>
+        // Get the stored response data from sessionStorage
+        const message = sessionStorage.getItem('motorStatus');
+        // Display the message in the <h1> element
+        document.getElementById('statusMessage').innerHTML = message || "No message received.";
+        // Optionally clear the session storage if you don't need it anymore
+        sessionStorage.removeItem('motorStatus');
+    </script>
+</body>
+</html>
