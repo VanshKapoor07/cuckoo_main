@@ -1,12 +1,16 @@
 #include <WiFi.h>
 #include <WebServer.h>
 #include <SPIFFS.h>
+#include <ArduinoJson.h>
+
 
 // Define motor pins
 #define MOTOR1_IN1 14
 #define MOTOR1_IN2 12
 #define MOTOR2_IN1 27
 #define MOTOR2_IN2 26
+#define MOTOR1_EN 13  // Enable pin for Motor 1
+#define MOTOR2_EN 25  // Enable pin for Motor 2
 
 // Define motor states
 #define FORWARD 1
@@ -36,6 +40,9 @@ void setup() {
   pinMode(MOTOR1_IN2, OUTPUT);
   pinMode(MOTOR2_IN1, OUTPUT);
   pinMode(MOTOR2_IN2, OUTPUT);
+  pinMode(MOTOR1_EN, OUTPUT);
+  pinMode(MOTOR2_EN, OUTPUT);
+
 
   // Create Access Point
   WiFi.softAP("ESP32_Motor_Control");
@@ -84,24 +91,35 @@ server.on("/forward", HTTP_GET, []() {
     file.close();
   });
 
-  server.on("/setTime", []() {
-    if (server.hasArg("set_time")) {
-      float set_time = server.arg("set_time").toFloat();  // Get the time value from the form
-      Serial.println("Set time interval: " + String(set_time) + " seconds");
-
-      // Send confirmation back to the client
-      server.send(200, "text/html", R"(
-        <h1>Time updated successfully!</h1>
-        <button onclick="location.href='/'">Go back</button>
-      )");
-
-      // Reset the motor state and timer
-//      previousMillis = millis();
-//      isMotorRunning = true;
-    } else {
-      server.send(200, "text/html", "<h1>No time provided</h1><br><a href='/'>Go Back</a>");
+  server.on("/set_time", HTTP_POST, []() {
+    float set_time = 0;
+    if (server.hasArg("plain")) {
+        String body = server.arg("plain");
+        
+        // Parse the JSON data
+        StaticJsonDocument<200> doc;
+        deserializeJson(doc, body);
+        set_time = doc["set_time"];
+        
+        Serial.println("Set time interval: " + String(set_time) + " seconds");
+        
+        // Process the set_time value (e.g., set a timer)
     }
-  });
+    server.send(200, "text/html", "<h1>Time updated successfully!</h1>");
+    setMotorState(STOP);
+    while (true){
+    delay(set_time*1000);
+    setMotorState(FORWARD);
+    delay(1500);
+    setMotorState(STOP);
+    delay(1000);
+    setMotorState(BACKWARD);
+    delay(1500);
+    setMotorState(STOP);
+    
+    }
+
+});
   // Start the server
   server.begin();
   Serial.println("Web server started.");
@@ -125,18 +143,24 @@ void setMotorState(int state) {
       digitalWrite(MOTOR1_IN2, LOW);
       digitalWrite(MOTOR2_IN1, HIGH);
       digitalWrite(MOTOR2_IN2, LOW);
+      analogWrite(MOTOR1_EN, 200);
+      analogWrite(MOTOR2_EN, 200);
       break;
     case BACKWARD:
       digitalWrite(MOTOR1_IN1, LOW);
       digitalWrite(MOTOR1_IN2, HIGH);
       digitalWrite(MOTOR2_IN1, LOW);
       digitalWrite(MOTOR2_IN2, HIGH);
+      analogWrite(MOTOR1_EN, 200);
+      analogWrite(MOTOR2_EN, 200);
       break;
     case STOP:
       digitalWrite(MOTOR1_IN1, LOW);
       digitalWrite(MOTOR1_IN2, LOW);
       digitalWrite(MOTOR2_IN1, LOW);
       digitalWrite(MOTOR2_IN2, LOW);
+      analogWrite(MOTOR1_EN, 0);  // Stop the motor by setting speed to 0
+      analogWrite(MOTOR2_EN, 0);  // Stop the motor by setting speed to 0
       break;
   }
 }
