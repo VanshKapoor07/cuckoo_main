@@ -8,7 +8,7 @@ const fetch = require('node-fetch'); // Use to communicate with NodeMCU
 const connection = mysql.createConnection({
     host: 'localhost',
     user: 'root',
-    password: 'workbench',
+    password: 'your_password',
     database: 'cuckoo',
 });
 
@@ -50,26 +50,79 @@ app.post('/signup', (req, res) => {
     }
 });
 
+// app.post('/signin', (req, res) => {
+//     const { name, password } = req.body;
+//     if (!name || !password) {
+//         return res.status(400).send("Invalid Input");
+//     }
+
+//     connection.query('SELECT * FROM cuckoo WHERE User_Name = (?) AND Password = (?)', [name, password], (err, results) => {
+//         if (err) throw err;
+
+//         if (results.length > 0) {
+//             const name = results[0].User_Name;
+//             console.log(results);
+//             res.render('timer', { name });
+//         } else {
+//             message = "Wrong credentials, try again";
+//             res.render('index', { message });
+//         }
+//     });
+//     //res.render('timer', {name:"Vansh"});
+// });
+
 app.post('/signin', (req, res) => {
     const { name, password } = req.body;
     if (!name || !password) {
         return res.status(400).send("Invalid Input");
     }
 
+    if (connection.state === 'disconnected') {
+        connection.connect(err => {
+            if (err) {
+                console.error('Error connecting to MySQL:', err);
+                return res.status(500).send('Database connection error');
+            }
+        });
+    }
+
     connection.query('SELECT * FROM cuckoo WHERE User_Name = (?) AND Password = (?)', [name, password], (err, results) => {
-        if (err) throw err;
+        if (err) {
+            console.error(err);
+            return res.status(500).send('Error executing query');
+        }
 
         if (results.length > 0) {
-            const name = results[0].User_Name;
+            const userName = results[0].User_Name;
             console.log(results);
-            res.render('timer', { name });
+            res.render('timer', { name: userName });
         } else {
             message = "Wrong credentials, try again";
             res.render('index', { message });
         }
     });
-    //res.render('timer', {name:"Vansh"});
 });
+
+
+// Function to perform the sign-in query
+function performSignIn(name, password, res) {
+    connection.query('SELECT * FROM cuckoo WHERE User_Name = ? AND Password = ?', [name, password], (err, results) => {
+        if (err) {
+            console.error('Query error:', err.stack);
+            return res.status(500).send('Query execution error.');
+        }
+
+        // Check if credentials are valid
+        if (results.length > 0) {
+            const userName = results[0].User_Name;
+            console.log('User logged in:', results);
+            res.render('timer', { name: userName });
+        } else {
+            const message = "Wrong credentials, try again";
+            res.render('index', { message });
+        }
+    });
+}
 
 // Communicate with NodeMCU from Node.js
 app.post('/sendToNodeMCU', async (req, res) => {

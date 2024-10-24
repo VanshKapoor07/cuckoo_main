@@ -22,7 +22,7 @@
 WebServer server(80);
 
 // Replace with your Node.js server IP
-const char* nodeJSServerIP = "http://192.168.56.1:3003";
+const char* nodeJSServerIP = "http://172.16.9.41:3003";
 
 void setup() {
   // Start Serial Monitor
