@@ -26,9 +26,13 @@
         <form action="/sendTimeToNodeMCU" method="GET">
             <label for="set_time">Set time interval (in hours):</label><br>
             <input type="number" id="time" name="set_time" step="0.1" min="0.1" max="24" required><br><br>
+            
+            <label for="set_time">How many days?</label><br>
+            <input type="number" id="time" name="no_of_days" step="1" min="1" max="31" required><br><br>
             <input class="set_time" type="submit" value="Set Time">
         </form>
     </div> 
+ 
       <script>
       
         function sendAction(action) {

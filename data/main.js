@@ -32,6 +32,18 @@ app.get('/', (req, res) => {
     res.render('index', { message });
 });
 
+ // JavaScript to handle modal functionality
+ function openModal() {
+    document.getElementById('pdfModal').style.display = 'block';
+    document.getElementById('backdrop').style.display = 'block';
+}
+
+function closeModal() {
+    document.getElementById('pdfModal').style.display = 'none';
+    document.getElementById('backdrop').style.display = 'none';
+}
+
+
 app.post('/signup', (req, res) => {
     const { name, email, password, confirmpassword } = req.body;
 
@@ -160,9 +172,9 @@ app.post('/sendToNodeMCU', async (req, res) => {
 
 
 app.get('/sendTimeToNodeMCU', async (req, res) => {
-    const { set_time } = req.query; // Extract the set_time from query parameters
+    const { set_time, no_of_days } = req.query; // Extract the set_time from query parameters
     console.log('Time interval received:', set_time);
-
+    const no_of_reminders = Math.trunc((set_time*60) / no_of_days);
     try {
         // Construct the URL where the value of set_time is passed as part of the URL
         // For example: http://192.168.4.1:80/set_time?value=x where x is the time interval
@@ -171,7 +183,7 @@ app.get('/sendTimeToNodeMCU', async (req, res) => {
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ set_time: set_time }),
+            body: JSON.stringify({ set_time: set_time, no_of_reminders: no_of_reminders}),
           });
 
         // Check if the response is okay
@@ -192,6 +204,8 @@ app.get('/sendTimeToNodeMCU', async (req, res) => {
         res.status(500).send('Internal server error');
     }
 });
+
+
 
 
 const PORT = process.env.PORT || 3003;

@@ -2,7 +2,7 @@
 #include <WebServer.h>
 #include <SPIFFS.h>
 #include <ArduinoJson.h>
-
+#include <DFRobotDFPlayerMini.h>
 
 // Define motor pins
 #define MOTOR1_IN1 14
@@ -14,15 +14,18 @@
 
 // Define motor states
 #define FORWARD 1
-#define BACKWARD 2
+#define BACKWARD_CUCKOO 2
 #define STOP 0
-
 
 // Create a web server on port 80
 WebServer server(80);
 
 // Replace with your Node.js server IP
 const char* nodeJSServerIP = "http://172.16.9.41:3003";
+
+// DFPlayer Mini setup
+HardwareSerial mySerial(2);  // Use Serial2 for ESP32
+DFRobotDFPlayerMini myDFPlayer;
 
 void setup() {
   // Start Serial Monitor
@@ -43,28 +46,40 @@ void setup() {
   pinMode(MOTOR1_EN, OUTPUT);
   pinMode(MOTOR2_EN, OUTPUT);
 
+  // Initialize DFPlayer
+  mySerial.begin(9600, SERIAL_8N1, 16, 17);  // Serial2 with RX on GPIO16, TX on GPIO17
+  Serial.println("Initializing DFPlayer...");
+  if (!myDFPlayer.begin(mySerial)) {  // Initialize DFPlayer
+    Serial.println("DFPlayer not detected! Please check connections.");
+    while (true); // Halt if initialization fails
+  }
+  Serial.println("DFPlayer Mini initialized.");
+  myDFPlayer.volume(80);  // Set volume (0-30)
+  myDFPlayer.EQ(DFPLAYER_EQ_NORMAL);  // Set EQ to normal
 
   // Create Access Point
   WiFi.softAP("ESP32_Motor_Control");
   Serial.println("Access Point created. IP address:");
   Serial.println(WiFi.softAPIP());
-
-
-
+  
+  void handleRoot();
+  void setMotorState(int state);
   // Setup web server routes
   server.on("/", handleRoot);
 
-
-server.on("/forward", HTTP_GET, []() {
+  server.on("/forward", HTTP_GET, []() {
     setMotorState(FORWARD);
     
+    myDFPlayer.play(1);  // Play sound when motors run
     server.send(200, "text/html", "<h1>Motor is moving forward</h1>");
-});
+  });
 
   server.on("/backward", []() {
-    setMotorState(BACKWARD);
+    setMotorState(BACKWARD_CUCKOO);
+    myDFPlayer.play(1);  // Play sound when motors run
     server.send(200, "text/html", "<h1>Motor is moving backward</h1>");
   });
+
   server.on("/stop", []() {
     setMotorState(STOP);
     server.send(200, "text/html", "<h1>Motor is stopped</h1>");
@@ -93,33 +108,42 @@ server.on("/forward", HTTP_GET, []() {
 
   server.on("/set_time", HTTP_POST, []() {
     float set_time = 0;
+    int no_of_reminders = 0;
     if (server.hasArg("plain")) {
         String body = server.arg("plain");
-        
-        // Parse the JSON data
         StaticJsonDocument<200> doc;
         deserializeJson(doc, body);
         set_time = doc["set_time"];
+        no_of_reminders = doc["no_of_reminders"].as<int>();
         
         Serial.println("Set time interval: " + String(set_time) + " seconds");
-        
-        // Process the set_time value (e.g., set a timer)
     }
     server.send(200, "text/html", "<h1>Time updated successfully!</h1>");
-    setMotorState(STOP);
-    while (true){
-    delay(set_time*1000);
-    setMotorState(FORWARD);
-    delay(1500);
-    setMotorState(STOP);
-    delay(1000);
-    setMotorState(BACKWARD);
-    delay(1500);
+    
     setMotorState(STOP);
     
+    
+    while (true) {
+        delay(set_time * 1000);
+        setMotorState(FORWARD);
+        myDFPlayer.play(1);  
+        delay(1500);
+        setMotorState(STOP);
+        delay(3000);
+        setMotorState(BACKWARD_CUCKOO);
+        delay(1500);
+        setMotorState(STOP);
+        myDFPlayer.stop();
+        
     }
-
 });
+
+server.on("/medicine_taken", HTTP_POST, []() {
+    Serial.println("Medicine taken endpoint triggered.");
+    medicine_taken = true;
+    server.send(200, "text/html", "<h1>Kudos for taking your medicine! You may go back now!</h1>");
+});
+
   // Start the server
   server.begin();
   Serial.println("Web server started.");
@@ -137,23 +161,22 @@ void handleRoot() {
 }
 
 void setMotorState(int state) {
-  switch(state) {
+  switch (state) {
     case FORWARD:
       digitalWrite(MOTOR1_IN1, HIGH);
       digitalWrite(MOTOR1_IN2, LOW);
       digitalWrite(MOTOR2_IN1, HIGH);
       digitalWrite(MOTOR2_IN2, LOW);
-      analogWrite(MOTOR1_EN, 200);
-      analogWrite(MOTOR2_EN, 200);
+      analogWrite(MOTOR2_EN, 150);
+      analogWrite(MOTOR1_EN, 150); 
       break;
-    case BACKWARD:
+    
+    case BACKWARD_CUCKOO:
       digitalWrite(MOTOR1_IN1, LOW);
       digitalWrite(MOTOR1_IN2, HIGH);
-      digitalWrite(MOTOR2_IN1, LOW);
-      digitalWrite(MOTOR2_IN2, HIGH);
-      analogWrite(MOTOR1_EN, 200);
-      analogWrite(MOTOR2_EN, 200);
+      analogWrite(MOTOR1_EN, 150);
       break;
+    
     case STOP:
       digitalWrite(MOTOR1_IN1, LOW);
       digitalWrite(MOTOR1_IN2, LOW);
