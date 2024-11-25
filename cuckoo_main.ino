@@ -13,8 +13,9 @@
 #define MOTOR2_EN 25  // Enable pin for Motor 2
 
 // Define motor states
-#define FORWARD 1
+#define FORWARD_CUCKOO 1
 #define BACKWARD_CUCKOO 2
+#define FORWARD_DRAWER 3
 #define STOP 0
 
 // Create a web server on port 80
@@ -68,7 +69,7 @@ void setup() {
   server.on("/", handleRoot);
 
   server.on("/forward", HTTP_GET, []() {
-    setMotorState(FORWARD);
+    setMotorState(FORWARD_CUCKOO);
     
     myDFPlayer.play(1);  // Play sound when motors run
     server.send(200, "text/html", "<h1>Motor is moving forward</h1>");
@@ -121,11 +122,11 @@ void setup() {
     server.send(200, "text/html", "<h1>Time updated successfully!</h1>");
     
     setMotorState(STOP);
-    
-    
+    delay(set_time * 1000);
+    setMotorState(FORWARD_DRAWER);
     while (true) {
-        delay(set_time * 1000);
-        setMotorState(FORWARD);
+        
+        setMotorState(FORWARD_CUCKOO);
         myDFPlayer.play(1);  
         delay(1500);
         setMotorState(STOP);
@@ -134,15 +135,11 @@ void setup() {
         delay(1500);
         setMotorState(STOP);
         myDFPlayer.stop();
-        
+        delay(set_time * 1000);
     }
 });
 
-server.on("/medicine_taken", HTTP_POST, []() {
-    Serial.println("Medicine taken endpoint triggered.");
-    medicine_taken = true;
-    server.send(200, "text/html", "<h1>Kudos for taking your medicine! You may go back now!</h1>");
-});
+
 
   // Start the server
   server.begin();
@@ -162,19 +159,20 @@ void handleRoot() {
 
 void setMotorState(int state) {
   switch (state) {
-    case FORWARD:
+    case FORWARD_CUCKOO:
       digitalWrite(MOTOR1_IN1, HIGH);
       digitalWrite(MOTOR1_IN2, LOW);
+      analogWrite(MOTOR1_EN, 100); 
+      break;
+    case FORWARD_DRAWER:
       digitalWrite(MOTOR2_IN1, HIGH);
       digitalWrite(MOTOR2_IN2, LOW);
-      analogWrite(MOTOR2_EN, 150);
-      analogWrite(MOTOR1_EN, 150); 
+      analogWrite(MOTOR2_EN, 200); 
       break;
-    
     case BACKWARD_CUCKOO:
       digitalWrite(MOTOR1_IN1, LOW);
       digitalWrite(MOTOR1_IN2, HIGH);
-      analogWrite(MOTOR1_EN, 150);
+      analogWrite(MOTOR1_EN, 100);
       break;
     
     case STOP:
