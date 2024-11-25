@@ -1,106 +1,107 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <title>Real-Time Clock</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding-top: 40px;
+    }
+    #clock {
+      font-size: 2em;
+      margin-top: 20px;
+    }
+  </style>
 </head>
 <body>
-  <div class="img_parashar">
-     <div class="heading">
-      <div class="img_cukoo"><img src="cuckoo_pic.jpeg" ></div>
+    <h1>Hello</h1>
+    <h1 id="myid"><%= name %></h1>
+
+  <h1>Current Time from NodeMCU</h1>
+
+  <div id="clock"><%= currentTime %></div>
+  <form id="hour-form">
+    <input type="number" name="hour_input1" id="hour_input1" placeholder="Enter target hour (0-23)" required>
+    <input type="number" name="minute_input1" id="minute_input1" placeholder="Enter target minute (0-59)" required>
+
+    <input type="number" name="hour_input2" id="hour_input2" placeholder="Enter target hour (0-23)" required>
+    <input type="number" name="minute_input2" id="minute_input2" placeholder="Enter target minute (0-59)" required>
+
+    <input type="number" name="hour_input3" id="hour_input3" placeholder="Enter target hour (0-23)" required>
+    <input type="number" name="minute_input3" id="minute_input3" placeholder="Enter target minute (0-59)" required>
+
+    <button type="submit">Submit</button>
+  </form>
+
+  <script>
+      let userHour1 = null;
+      let userHour2 = null;
+      let userHour3 = null;
+
+  // Handle form submission
+  document.getElementById('hour-form').addEventListener('submit', function(event) {
+    event.preventDefault(); // Prevent page reload
+    const inputHour1 = document.getElementById('hour_input1').value;
+    const inputMinute1 = document.getElementById('minute_input1').value;
+    userHour1 = parseInt(inputHour1);
+    userMinute1 = parseInt(inputMinute1);
+    console.log("User Entered Hour:", userHour1);
+    console.log("User Entered Minute:", userMinute1);
+
+    const inputHour2 = document.getElementById('hour_input2').value;
+    const inputMinute2 = document.getElementById('minute_input2').value;
+    userHour2 = parseInt(inputHour2);
+    userMinute2 = parseInt(inputMinute2);
+    console.log("User Entered Hour:", userHour2);
+    console.log("User Entered Minute:", userMinute2);
+
+    const inputHour3 = document.getElementById('hour_input3').value;
+    const inputMinute3 = document.getElementById('minute_input3').value;
+    userHour3 = parseInt(inputHour3);
+    userMinute3 = parseInt(inputMinute3);
+    console.log("User Entered Hour:", userHour3);
+    console.log("User Entered Minute:", userMinute3);
+
+
+  });
+
+    setInterval(async () => {
+      try {
+        const res = await fetch('/realtime');
+        const data = await res.json();
+        console.log("Time from NodeMCU:", data.time); // This will log it to console
+        const hourString = data.time.split(' ')[1].split(':')[0]; // "21"
+        const minuteString = data.time.split(' ')[1].split(':')[1]; // "21"
+        const secondSting = data.time.split(' ')[1].split(':')[2];
+
+      const hourInt = parseInt(hourString); // 21 as integer
+      const minuteInt = parseInt(minuteString); // 21 as integer
+      const secondInt = parseInt(secondSting); //second as integer
+
+      console.log("Extracted Hour:", hourInt);
+      console.log("Extracted minute:",minuteInt);
+      console.log("Extracted second:", secondInt);
+
+      if (((hourInt == userHour1) && (minuteInt==userMinute1) && (secondInt==0)) || ((hourInt == userHour2) && (minuteInt==userMinute2) && (secondInt==0)) || ((hourInt == userHour3) && (minuteInt==userMinute3) && (secondInt==0))){
+        console.log("It is a match!");
+        fetch('/time-match')
+      .then(response => response.text())
+      .then(data => console.log("Response from server:", data))
+      .catch(error => console.error('Error contacting server:', error));
       
-        <h1>Cuckoo Medicine Buddy </h1>
-    </div>
-    <div class="company-card">
-        <h2>Hello, </h2>
-        <h1 id="myid"><%= name %></h1>
-      </div>
-    <div class="buttons">
-      
-      <button onclick="sendAction('forward')">Move Forward</button>
-      <button onclick="sendAction('backward')">Move Backward</button>
-      <button onclick="sendAction('stop')">Stop!</button>
-      <div class="form">
-        <form action="/sendTimeToNodeMCU" method="GET">
-            <label for="set_time">Set time interval (in hours):</label><br>
-            <input type="number" id="time" name="set_time" step="0.1" min="0.1" max="24" required><br><br>
-            
-            <label for="set_time">How many days?</label><br>
-            <input type="number" id="time" name="no_of_days" step="1" min="1" max="31" required><br><br>
-            <input class="set_time" type="submit" value="Set Time">
-        </form>
-    </div> 
- 
-      <script>
-      
-        function sendAction(action) {
-    console.log("CHECK-");
-    console.log(action);
+      }
+      else{
+        console.log("Not a match");
+      }
 
-    fetch('/sendToNodeMCU', {
-    method: 'POST',
-    headers: {
-        'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ action }) // Properly stringify the action
-})
-.then(response => {
-    if (!response.ok) {
-        console.error('HTTP error:', response.status, response.statusText); // Log HTTP errors
-        return Promise.reject('HTTP error: ' + response.status);
-    }
-    return response.text(); // Fetch the text response
-})
-.then(data => {
-    console.log('Response from server:', data); // Log successful responses
-    sessionStorage.setItem('motorStatus', data); // Store the response data
-    // Redirect to a new HTML page
-    window.location.href = "/success.html"; // Adjust this path as needed
-})
-.catch(error => {
-    console.error('Failed to send action to NodeMCU:', error);
-});
-
-    
-    // fetch('/sendToNodeMCU', {
-    //     method: 'POST',
-    //     headers: {
-    //         'Content-Type': 'application/json'
-    //     },
-    //     body: JSON.stringify({action}) // Properly stringify the action
-    // })
-    // .then(response => {
-    //     if (!response.ok) {
-    //         console.error('HTTP error:', response.status, response.statusText); // Log HTTP errors
-    //         return Promise.reject('HTTP error: ' + response.status);
-    //     }
-    //     return response.text();
-    // })
-    // .then(data => {
-    //     console.log('Response from server:', data); // Log successful responses
-    //     sessionStorage.setItem('motorStatus', data);        //added now
-    //             // Redirect to a new HTML page
-    //             window.location.href = "/success.html"; // Adjust this path as needed    //added now
-    // })
-    // .catch(error => {
-    //     console.error('Failed to send action to NodeMCU:', error);
-    // });
-}
-
-        </script>
-
-      
-    </div>
-
-    
-
-    
-  </div> 
-  <a href="/">Logout</a>
-  
-
-  
+        document.getElementById('clock').innerText = data.time || "Time not found";
+      } catch (err) {
+        document.getElementById('clock').innerText = "Error fetching time";
+      }
+    }, 1000); // update every second
+  </script>
 </body>
 </html>

@@ -2,65 +2,61 @@
 #include <WebServer.h>
 #include <SPIFFS.h>
 #include <ArduinoJson.h>
-#include <DFRobotDFPlayerMini.h>
+#include <time.h>
+
+// Replace with your Wi-Fi credentials
+const char* ssid = "moto g54 5G_1156";
+const char* password = "12345678";
+
+// Set time offset for IST (GMT+5:30)
+const long gmtOffset_sec = 19800;
+const int daylightOffset_sec = 0;
+
 
 // Define motor pins
-#define MOTOR1_IN1 14
-#define MOTOR1_IN2 12
-#define MOTOR2_IN1 27
-#define MOTOR2_IN2 26
-#define MOTOR1_EN 13  // Enable pin for Motor 1
-#define MOTOR2_EN 25  // Enable pin for Motor 2
+#define MOTOR1_IN1 12             
+#define MOTOR1_IN2 14             
+
+#define MOTOR1_EN 13  // Enable pin for Motor 1     
 
 // Define motor states
-#define FORWARD 1
+#define FORWARD_CUCKOO 1
 #define BACKWARD_CUCKOO 2
 #define STOP 0
 
-// Create a web server on port 80
+
 WebServer server(80);
 
-// Replace with your Node.js server IP
-const char* nodeJSServerIP = "http://172.16.9.41:3003";
-
-// DFPlayer Mini setup
-HardwareSerial mySerial(2);  // Use Serial2 for ESP32
-DFRobotDFPlayerMini myDFPlayer;
+const char* nodeJSServerIP = "http://172.16.9.221:3003";
 
 void setup() {
-  // Start Serial Monitor
   Serial.begin(115200);
-
   // Initialize SPIFFS
   if (!SPIFFS.begin(true)) {
     Serial.println("An error has occurred while mounting SPIFFS");
     return;
   }
   Serial.println("SPIFFS mounted successfully");
-
+  
   // Initialize motor pins
   pinMode(MOTOR1_IN1, OUTPUT);
   pinMode(MOTOR1_IN2, OUTPUT);
-  pinMode(MOTOR2_IN1, OUTPUT);
-  pinMode(MOTOR2_IN2, OUTPUT);
   pinMode(MOTOR1_EN, OUTPUT);
-  pinMode(MOTOR2_EN, OUTPUT);
 
-  // Initialize DFPlayer
-  mySerial.begin(9600, SERIAL_8N1, 16, 17);  // Serial2 with RX on GPIO16, TX on GPIO17
-  Serial.println("Initializing DFPlayer...");
-  if (!myDFPlayer.begin(mySerial)) {  // Initialize DFPlayer
-    Serial.println("DFPlayer not detected! Please check connections.");
-    while (true); // Halt if initialization fails
+  // Connect to Wi-Fi
+  WiFi.begin(ssid, password);
+  Serial.print("Connecting to Wi-Fi");
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
   }
-  Serial.println("DFPlayer Mini initialized.");
-  myDFPlayer.volume(80);  // Set volume (0-30)
-  myDFPlayer.EQ(DFPLAYER_EQ_NORMAL);  // Set EQ to normal
 
-  // Create Access Point
-  WiFi.softAP("ESP32_Motor_Control");
-  Serial.println("Access Point created. IP address:");
-  Serial.println(WiFi.softAPIP());
+  Serial.println("\nConnected. IP:");
+  Serial.println(WiFi.localIP());
+
+  // Set up NTP time
+  configTime(gmtOffset_sec, daylightOffset_sec, "pool.ntp.org", "time.nist.gov");
+
   
   void handleRoot();
   void setMotorState(int state);
@@ -68,15 +64,12 @@ void setup() {
   server.on("/", handleRoot);
 
   server.on("/forward", HTTP_GET, []() {
-    setMotorState(FORWARD);
-    
-    myDFPlayer.play(1);  // Play sound when motors run
+    setMotorState(FORWARD_CUCKOO);
     server.send(200, "text/html", "<h1>Motor is moving forward</h1>");
   });
 
   server.on("/backward", []() {
     setMotorState(BACKWARD_CUCKOO);
-    myDFPlayer.play(1);  // Play sound when motors run
     server.send(200, "text/html", "<h1>Motor is moving backward</h1>");
   });
 
@@ -105,54 +98,36 @@ void setup() {
     server.streamFile(file, "application/javascript");
     file.close();
   });
-
-  server.on("/set_time", HTTP_POST, []() {
-    float set_time = 0;
-    int no_of_reminders = 0;
-    if (server.hasArg("plain")) {
-        String body = server.arg("plain");
-        StaticJsonDocument<200> doc;
-        deserializeJson(doc, body);
-        set_time = doc["set_time"];
-        no_of_reminders = doc["no_of_reminders"].as<int>();
-        
-        Serial.println("Set time interval: " + String(set_time) + " seconds");
+  
+  // Route for time
+  server.on("/get-time", HTTP_GET, []() {
+    Serial.println("Received /get-time");
+    time_t now = time(nullptr);
+    struct tm timeinfo;
+    if (!getLocalTime(&timeinfo)) {
+      Serial.println("Failed to get time");
+      server.send(500, "application/json", "{\"error\":\"Failed to get time\"}");
+      return;
     }
-    server.send(200, "text/html", "<h1>Time updated successfully!</h1>");
-    
-    setMotorState(STOP);
-    
-    
-    while (true) {
-        delay(set_time * 1000);
-        setMotorState(FORWARD);
-        myDFPlayer.play(1);  
-        delay(1500);
-        setMotorState(STOP);
-        delay(3000);
-        setMotorState(BACKWARD_CUCKOO);
-        delay(1500);
-        setMotorState(STOP);
-        myDFPlayer.stop();
-        
-    }
-});
 
-server.on("/medicine_taken", HTTP_POST, []() {
-    Serial.println("Medicine taken endpoint triggered.");
-    medicine_taken = true;
-    server.send(200, "text/html", "<h1>Kudos for taking your medicine! You may go back now!</h1>");
-});
+    StaticJsonDocument<200> doc;
+    char formattedTime[30];
+    strftime(formattedTime, sizeof(formattedTime), "%Y-%m-%d %H:%M:%S", &timeinfo);
+    doc["time"] = formattedTime;
 
-  // Start the server
+    String jsonString;
+    serializeJson(doc, jsonString);
+    server.send(200, "application/json", jsonString);
+  });
+
   server.begin();
   Serial.println("Web server started.");
 }
 
 void loop() {
-  // Handle web server requests
   server.handleClient();
 }
+
 
 void handleRoot() {
   // Redirect to Node.js server's index page
@@ -162,28 +137,22 @@ void handleRoot() {
 
 void setMotorState(int state) {
   switch (state) {
-    case FORWARD:
+    case FORWARD_CUCKOO:
       digitalWrite(MOTOR1_IN1, HIGH);
       digitalWrite(MOTOR1_IN2, LOW);
-      digitalWrite(MOTOR2_IN1, HIGH);
-      digitalWrite(MOTOR2_IN2, LOW);
-      analogWrite(MOTOR2_EN, 150);
-      analogWrite(MOTOR1_EN, 150); 
+      analogWrite(MOTOR1_EN, 100); 
       break;
-    
+   
     case BACKWARD_CUCKOO:
       digitalWrite(MOTOR1_IN1, LOW);
       digitalWrite(MOTOR1_IN2, HIGH);
-      analogWrite(MOTOR1_EN, 150);
+      analogWrite(MOTOR1_EN, 100);
       break;
     
     case STOP:
       digitalWrite(MOTOR1_IN1, LOW);
       digitalWrite(MOTOR1_IN2, LOW);
-      digitalWrite(MOTOR2_IN1, LOW);
-      digitalWrite(MOTOR2_IN2, LOW);
       analogWrite(MOTOR1_EN, 0);  // Stop the motor by setting speed to 0
-      analogWrite(MOTOR2_EN, 0);  // Stop the motor by setting speed to 0
       break;
   }
 }
