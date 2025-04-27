@@ -4,17 +4,9 @@
 <head>
   <meta charset="UTF-8">
   <title>Real-Time Clock</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      padding-top: 40px;
-    }
-    #clock {
-      font-size: 2em;
-      margin-top: 20px;
-    }
-  </style>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 </head>
 <body>
     <h1>Hello</h1>
@@ -24,19 +16,107 @@
 
   <div id="clock"><%= currentTime %></div>
   <form id="hour-form">
-    <input type="number" name="hour_input1" id="hour_input1" placeholder="Enter target hour (0-23)" required>
-    <input type="number" name="minute_input1" id="minute_input1" placeholder="Enter target minute (0-59)" required>
-
-    <input type="number" name="hour_input2" id="hour_input2" placeholder="Enter target hour (0-23)" required>
-    <input type="number" name="minute_input2" id="minute_input2" placeholder="Enter target minute (0-59)" required>
-
-    <input type="number" name="hour_input3" id="hour_input3" placeholder="Enter target hour (0-23)" required>
-    <input type="number" name="minute_input3" id="minute_input3" placeholder="Enter target minute (0-59)" required>
-
-    <button type="submit">Submit</button>
+    <div class="medication-time">
+      <h3>Morning Medication</h3>
+      <div class="time-input-group">
+        <input type="number" name="hour_input1" id="hour_input1" min="0" max="23" placeholder="Hour (0-23)" required>
+        <span class="time-separator">:</span>
+        <input type="number" name="minute_input1" id="minute_input1" min="0" max="59" placeholder="Minute (0-59)" required>
+      </div>
+    </div>
+  
+    <div class="medication-time">
+      <h3>Afternoon Medication</h3>
+      <div class="time-input-group">
+        <input type="number" name="hour_input2" id="hour_input2" min="0" max="23" placeholder="Hour (0-23)" required>
+        <span class="time-separator">:</span>
+        <input type="number" name="minute_input2" id="minute_input2" min="0" max="59" placeholder="Minute (0-59)" required>
+      </div>
+    </div>
+  
+    <div class="medication-time">
+      <h3>Evening Medication</h3>
+      <div class="time-input-group">
+        <input type="number" name="hour_input3" id="hour_input3" min="0" max="23" placeholder="Hour (0-23)" required>
+        <span class="time-separator">:</span>
+        <input type="number" name="minute_input3" id="minute_input3" min="0" max="59" placeholder="Minute (0-59)" required>
+      </div>
+    </div>
+  
+    <button type="submit">Set Medication Reminder Times</button>
   </form>
 
+  <!-- Chatbot UI -->
+<div id="chatbot-container">
+  <div id="chatbot-header" onclick="toggleChat()">🤖 Chat with us!</div>
+  <div id="chatbot-body" style="display: none;">
+    <div id="chat-messages"></div>
+    <input type="text" id="user-input" placeholder="Type your message..." onkeydown="if(event.key==='Enter') sendMessage()">
+    <button onclick="sendMessage()">Send</button>
+  </div>
+</div>
+
+<style>
+  #chatbot-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 300px;
+    font-family: Arial, sans-serif;
+  }
+  #chatbot-header {
+    background-color: #007BFF;
+    color: white;
+    padding: 10px;
+    cursor: pointer;
+    border-radius: 10px 10px 0 0;
+    text-align: center;
+  }
+  #chatbot-body {
+    background-color: white;
+    border: 1px solid #ccc;
+    height: 300px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    border-radius: 0 0 10px 10px;
+  }
+  #chat-messages {
+    flex: 1;
+    padding: 10px;
+    overflow-y: auto;
+  }
+  #user-input {
+    width: calc(100% - 50px);
+    padding: 8px;
+    border: none;
+    border-top: 1px solid #ccc;
+  }
+  button {
+    width: 50px;
+    border: none;
+    background-color: #007BFF;
+    color: white;
+    cursor: pointer;
+  }
+  .chart-container {
+      width: 400px;
+      height: 400px;
+      background: #fff;
+      padding: 20px;
+      border-radius: 20px;
+      box-shadow: 0px 0px 20px rgba(0,0,0,0.1);
+    }
+
+</style>
+
+
+
   <script>
+    // Dummy data initialization
+  let totalReminders = 10;
+  let taken = 7;
+  let notTaken = totalReminders - taken;
       let userHour1 = null;
       let userHour2 = null;
       let userHour3 = null;
@@ -67,12 +147,26 @@
 
 
   });
+  let min_weight = 9999999;
+  let base_weight = 0;
+  let reminderMissed = false; // initially false
 
-    setInterval(async () => {
+  setInterval(async () => {
       try {
         const res = await fetch('/realtime');
+        const weight = await fetch('/weight');
         const data = await res.json();
+        const data2 = await weight.json();
+
+        
+        if (data2.weight<=min_weight){
+            min_weight = data2.weight;
+        }
+
+
         console.log("Time from NodeMCU:", data.time); // This will log it to console
+        console.log("Weight from NodeMCU:", data2.weight);
+        console.log("Minimum weight ki value-->", min_weight);
         const hourString = data.time.split(' ')[1].split(':')[0]; // "21"
         const minuteString = data.time.split(' ')[1].split(':')[1]; // "21"
         const secondSting = data.time.split(' ')[1].split(':')[2];
@@ -84,24 +178,142 @@
       console.log("Extracted Hour:", hourInt);
       console.log("Extracted minute:",minuteInt);
       console.log("Extracted second:", secondInt);
+    
+      
 
-      if (((hourInt == userHour1) && (minuteInt==userMinute1) && (secondInt==0)) || ((hourInt == userHour2) && (minuteInt==userMinute2) && (secondInt==0)) || ((hourInt == userHour3) && (minuteInt==userMinute3) && (secondInt==0))){
+      if ((((hourInt == userHour1) && (minuteInt==userMinute1) && (secondInt==0)) || ((hourInt == userHour2) && (minuteInt==userMinute2) && (secondInt==0)) || ((hourInt == userHour3) && (minuteInt==userMinute3) && (secondInt==0))) ){
         console.log("It is a match!");
+        base_weight = data2.weight;
+        reminderMissed = false; // reset the flag, new reminder started
+
+        console.log("Taking value of base weight-->");
+        console.log(base_weight);
         fetch('/time-match')
       .then(response => response.text())
       .then(data => console.log("Response from server:", data))
       .catch(error => console.error('Error contacting server:', error));
       
       }
-      else{
-        console.log("Not a match");
+      else if(((((hourInt == userHour1) && (minuteInt==userMinute1+2) && (secondInt==0 || secondInt==1 || secondInt==2 || secondInt==3 || secondInt==4)) || ((hourInt == userHour2) && (minuteInt==userMinute2+2) && (secondInt==0 || secondInt==1 || secondInt==2 || secondInt==3 || secondInt==4)) || ((hourInt == userHour3) && (minuteInt==userMinute3+2) && (secondInt==0 || secondInt==1 || secondInt==2 || secondInt==3 || secondInt==4))) && ((min_weight>=(base_weight-5))&&(min_weight<=(base_weight+5))))){
+        console.log("It is reminder!!!!!!!!!!!!!!!!!!!!!!!!");
+        totalReminders = totalReminders + 1;
+        reminderMissed = true; // missed reminder
+
+        fetch('/time-match')
+      .then(response => response.text())
+      .then(data => console.log("Response from server:", data))
+      .catch(error => console.error('Error contacting server:', error));
       }
+
+      else {
+    // Now, only increase taken if reminder was NOT missed
+    if (!reminderMissed) {
+        taken = taken + 1;
+        reminderMissed = true; // make sure taken is not incremented again
+        console.log("Medicine taken successfully!");
+    }
+    console.log("Not a match");
+}
 
         document.getElementById('clock').innerText = data.time || "Time not found";
       } catch (err) {
         document.getElementById('clock').innerText = "Error fetching time";
       }
     }, 1000); // update every second
+
+
+
+
+    function toggleChat() {
+    const body = document.getElementById('chatbot-body');
+    body.style.display = (body.style.display === 'none') ? 'flex' : 'none';
+  }
+
+  function sendMessage() {
+    const input = document.getElementById('user-input');
+    const message = input.value.trim();
+    if (message === '') return;
+
+    const chatMessages = document.getElementById('chat-messages');
+    chatMessages.innerHTML += `<div><b>You:</b> ${message}</div>`;
+
+    input.value = '';
+
+    // Send message to server
+    fetch('/chatbot', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message })
+    })
+    .then(res => res.json())
+    .then(data => {
+      chatMessages.innerHTML += `<div><b>Bot:</b> ${data.reply}</div>`;
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    })
+    .catch(error => {
+      chatMessages.innerHTML += `<div><b>Bot:</b> Error communicating with server.</div>`;
+    });
+  }
   </script>
+
+  
+<div class="chart-container">
+  <h2>Drug Adherence Data</h2>
+  <canvas id="medicineChart"></canvas>
+</div>
+
+<script>
+  
+
+  const ctx = document.getElementById('medicineChart').getContext('2d');
+  const medicineChart = new Chart(ctx, {
+    type: 'pie',
+    data: {
+      labels: ['Medicine Taken', 'Medicine Not Taken'],
+      datasets: [{
+        data: [taken, notTaken],
+        backgroundColor: ['#4CAF50', '#FF5252'],
+        hoverOffset: 10
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: {
+            color: '#555',
+            font: {
+              size: 14
+            }
+          }
+        },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              let total = context.dataset.data.reduce((a, b) => a + b, 0);
+              let value = context.parsed;
+              let percentage = (value / total * 100).toFixed(1);
+              return `${context.label}: ${percentage}%`;
+            }
+          }
+        }
+      }
+    }
+  });
+
+  // Function to update chart dynamically from backend
+  function updateChart(newTaken, newTotal) {
+    medicineChart.data.datasets[0].data = [newTaken, newTotal - newTaken];
+    medicineChart.update();
+  }
+// After 2 minutes
+setInterval(() => {
+  updateChart(taken, totalReminders);
+}, 10000); // 10 seconds = 10000 milliseconds
+
+</script>
+
+
 </body>
 </html>

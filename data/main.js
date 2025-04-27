@@ -3,10 +3,12 @@ const mysql = require('mysql2');
 const app = express();
 const axios = require('axios');
 
+
 const path = require('path');
 const fetch = require('node-fetch'); // Use to communicate with NodeMCU
 
 const NODEMCU_IP = "http://192.168.77.227:80"; // Change to your ESP32's IP
+
 
 
 // MySQL database connection
@@ -188,6 +190,45 @@ app.post('/signin', async(req, res) => {
         console.error('Error during motor control sequence:', error);
     }
   });
+
+
+  app.get('/weight', async(req, res)=>{
+      try{
+          const response2 = await axios.get(`${NODEMCU_IP}/weight`);
+          const currentWeight = response2.data.weight || response2.data;
+          console.log("Weight received-->");
+          console.log(currentWeight);
+          res.json({ weight: currentWeight});
+  
+      } catch (error) {
+          console.error("Error fetching weight from NodeMCU:", error.message);
+          res.status(500).json({ error: "Unable to fetch weight" });
+        }
+    })
+
+    
+  // Chatbot Route
+ // Chatbot Route
+app.post('/chatbot', (req, res) => {
+    const userMessage = req.body.message.toLowerCase();
+
+    let reply = "Sorry, I didn't understand that.";
+
+    if (userMessage.includes('hello') || userMessage.includes('hi')) {
+        reply = "Hello! How can I assist you today?";
+    } else if (userMessage.includes('time')) {
+        reply = "You can see the current time above! ⏰";
+    } else if (userMessage.includes('medicine')) {
+        reply = "Don't forget to set your medicine reminder times!";
+    } else if (userMessage.includes('bye')) {
+        reply = "Goodbye! Have a nice day!";
+    }
+    // Add more conditions if you want!
+
+    res.json({ reply });
+});
+
+
 
 
 
