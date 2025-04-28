@@ -24,6 +24,7 @@ const int daylightOffset_sec = 0;
 
 // Define motor states
 #define FORWARD_CUCKOO 1
+#define FORWARD_CUCKOO 1
 #define BACKWARD_CUCKOO 2
 #define STOP 0
 
@@ -207,6 +208,7 @@ void handleRoot() {
 void setMotorState(int state) {
   switch (state) {
     case FORWARD_CUCKOO:
+    case FORWARD_CUCKOO:
       digitalWrite(MOTOR1_IN1, HIGH);
       digitalWrite(MOTOR1_IN2, LOW);
       analogWrite(MOTOR1_EN, 100); 
@@ -215,6 +217,7 @@ void setMotorState(int state) {
     case BACKWARD_CUCKOO:
       digitalWrite(MOTOR1_IN1, LOW);
       digitalWrite(MOTOR1_IN2, HIGH);
+      analogWrite(MOTOR1_EN, 100);
       analogWrite(MOTOR1_EN, 100);
       break;
     
