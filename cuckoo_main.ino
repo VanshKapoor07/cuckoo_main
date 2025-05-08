@@ -3,11 +3,12 @@
 #include <SPIFFS.h>
 #include <ArduinoJson.h>
 #include <time.h>
+#include <DFRobotDFPlayerMini.h>
 #include "HX711.h"
 
 // Replace with your Wi-Fi credentials
-const char* ssid = "moto g54 5G_1156";
-const char* password = "12345678";
+const char* ssid = "2+3= 7";
+const char* password = "10062002";
 
 // Set time offset for IST (GMT+5:30)
 const long gmtOffset_sec = 19800;
@@ -19,8 +20,8 @@ const int daylightOffset_sec = 0;
 #define MOTOR1_EN 13  // Enable pin for Motor 1     
 
 // HX711 Load Cell pins
-#define DOUT 22
-#define CLK 21
+#define DOUT 22     //23
+#define CLK 21     //19
 
 // Define motor states
 #define FORWARD_CUCKOO 1
@@ -37,6 +38,10 @@ WebServer server(80);
 
 const char* nodeJSServerIP = "http://172.16.9.221:3003";
 
+// DFPlayer Mini setup
+HardwareSerial mySerial(2);  // Use Serial2 for ESP32
+DFRobotDFPlayerMini myDFPlayer;
+
 void setup() {
   Serial.begin(115200);
   
@@ -52,6 +57,20 @@ void setup() {
   pinMode(MOTOR1_IN2, OUTPUT);
   pinMode(MOTOR1_EN, OUTPUT);
 
+// Initialize DFPlayer
+  mySerial.begin(9600, SERIAL_8N1, 16, 17);  // RX = GPIO 18, TX = GPIO 19
+  Serial.println("Initializing DFPlayer...");
+
+  if (!myDFPlayer.begin(mySerial)) {
+    Serial.println("DFPlayer not detected! Please check connections.");
+    while (true); // Halt if initialization fails
+  }
+
+  Serial.println("DFPlayer Mini initialized.");
+  myDFPlayer.volume(30);  // Set volume (0-30)
+  myDFPlayer.EQ(DFPLAYER_EQ_NORMAL);  // Set EQ to normal
+  
+  
   // Connect to Wi-Fi
   WiFi.begin(ssid, password);
   Serial.print("Connecting to Wi-Fi");
@@ -85,11 +104,13 @@ void setup() {
   server.on("/", handleRoot);
 
   server.on("/forward", HTTP_GET, []() {
+    myDFPlayer.play(1);  // Continuously loop track 001.mp3
     setMotorState(FORWARD_CUCKOO);
     server.send(200, "text/html", "<h1>Motor is moving forward</h1>");
   });
 
   server.on("/backward", HTTP_GET, []() {
+    myDFPlayer.stop();
     setMotorState(BACKWARD_CUCKOO);
     server.send(200, "text/html", "<h1>Motor is moving backward</h1>");
   });
@@ -208,17 +229,16 @@ void handleRoot() {
 void setMotorState(int state) {
   switch (state) {
     case FORWARD_CUCKOO:
-    case FORWARD_CUCKOO:
       digitalWrite(MOTOR1_IN1, HIGH);
       digitalWrite(MOTOR1_IN2, LOW);
-      analogWrite(MOTOR1_EN, 100); 
+      analogWrite(MOTOR1_EN, 210); 
       break;
    
     case BACKWARD_CUCKOO:
       digitalWrite(MOTOR1_IN1, LOW);
       digitalWrite(MOTOR1_IN2, HIGH);
-      analogWrite(MOTOR1_EN, 100);
-      analogWrite(MOTOR1_EN, 100);
+      analogWrite(MOTOR1_EN, 220);
+      analogWrite(MOTOR1_EN, 220);
       break;
     
     case STOP:

@@ -194,7 +194,7 @@
       .catch(error => console.error('Error contacting server:', error));
       
       }
-      else if(((((hourInt == userHour1) && (minuteInt==userMinute1+2) && (secondInt==0 || secondInt==1 || secondInt==2 || secondInt==3 || secondInt==4)) || ((hourInt == userHour2) && (minuteInt==userMinute2+2) && (secondInt==0 || secondInt==1 || secondInt==2 || secondInt==3 || secondInt==4)) || ((hourInt == userHour3) && (minuteInt==userMinute3+2) && (secondInt==0 || secondInt==1 || secondInt==2 || secondInt==3 || secondInt==4))) && ((min_weight>=(base_weight-5))&&(min_weight<=(base_weight+5))))){
+      else if(((((hourInt == userHour1) && (minuteInt==userMinute1+2) && (secondInt==0 || secondInt==1 || secondInt==2 || secondInt==3 || secondInt==4)) || ((hourInt == userHour2) && (minuteInt==userMinute2+2) && (secondInt==0 || secondInt==1 || secondInt==2 || secondInt==3 || secondInt==4)) || ((hourInt == userHour3) && (minuteInt==userMinute3+2) && (secondInt==0 || secondInt==1 || secondInt==2 || secondInt==3 || secondInt==4))) && ((min_weight>=(base_weight-2))&&(min_weight<=(base_weight+2))))){
         console.log("It is reminder!!!!!!!!!!!!!!!!!!!!!!!!");
         totalReminders = totalReminders + 1;
         reminderMissed = true; // missed reminder

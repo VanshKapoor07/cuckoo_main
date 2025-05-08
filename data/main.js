@@ -7,7 +7,7 @@ const axios = require('axios');
 const path = require('path');
 const fetch = require('node-fetch'); // Use to communicate with NodeMCU
 
-const NODEMCU_IP = "http://192.168.77.227:80"; // Change to your ESP32's IP
+const NODEMCU_IP = "http://192.168.58.227:80"; // Change to your ESP32's IP
 
 
 
@@ -166,25 +166,25 @@ app.post('/signin', async(req, res) => {
     // Now handle motor actions
     try {
         console.log("▶️ Moving motor forward for 5 seconds...");
-        await fetch(`http://192.168.77.227:80/forward`, { method: 'GET' });
+        await fetch(`http://192.168.58.227:80/forward`, { method: 'GET' });
   
         // Wait for 5 seconds
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        await new Promise(resolve => setTimeout(resolve, 500));
   
         console.log("⏹️ Stopping motor for 50 seconds...");
-        await fetch(`http://192.168.77.227:80/stop`, { method: 'GET' });
+        await fetch(`http://192.168.58.227:80/stop`, { method: 'GET' });
   
         // Wait for 50 seconds
-        await new Promise(resolve => setTimeout(resolve, 50000));
+        await new Promise(resolve => setTimeout(resolve, 59000));
   
         console.log("◀️ Moving motor backward for 5 seconds...");
-        await fetch(`http://192.168.77.227:80/backward`, { method: 'GET' });
+        await fetch(`http://192.168.58.227:80/backward`, { method: 'GET' });
   
         // Wait for 5 seconds
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        await new Promise(resolve => setTimeout(resolve, 500));
   
         console.log("⏹️ Finally stopping motor after total 60 seconds...");
-        await fetch(`http://192.168.77.227:80/stop`, { method: 'GET' });
+        await fetch(`http://192.168.58.227:80/stop`, { method: 'GET' });
   
     } catch (error) {
         console.error('Error during motor control sequence:', error);
